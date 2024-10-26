@@ -1,101 +1,118 @@
+"use client";
+
+import { useState } from "react";
 import Image from "next/image";
+import Navbar from "../components/navbar";
+import { MdOutlineFileUpload } from "react-icons/md";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [image, setImage] = useState<string | null>(null);
+  const [result, setResult] = useState<number | null>(null);
+  const [productUrl, setProductUrl] = useState<string | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    handleFile(file);
+  };
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleFile(file);
+  };
+
+  const handleFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setImage(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSearch = async () => {
+    if (!image) return;
+
+    try {
+      const formData = new FormData();
+      const blob = await fetch(image).then(res => res.blob());
+      formData.append("file", blob, "image.png");
+
+      const response = await fetch("http://localhost:7000/api/search", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setResult(data);
+        console.log(data)
+
+        // Hacer la segunda solicitud a /api/product/<int:id>
+        const productResponse = await fetch(`http://localhost:7000/api/product/${data}`);
+        if (productResponse.ok) {
+          const productData = await productResponse.json();
+          setProductUrl("https://www.google.com/search?q=" + encodeURIComponent(productData.nombre) +"liverpool");
+          console.log(productUrl)
+          if (productUrl) {
+            window.location.href = productUrl;
+          }
+        } else {
+          const errorText = await productResponse.text();
+          console.error("Error al obtener el producto: ", errorText);
+        }
+      } else {
+        const errorText = await response.text();
+        console.error("Error en la búsqueda: ", errorText);
+      }
+    } catch (error) {
+      console.error("Error en la búsqueda", error);
+    }
+  };
+
+  return (
+    <main className="min-h-screen flex flex-col">
+      <Navbar />
+
+      <div className="flex justify-center w-full h-[80%] items-center mt-20">
+        <div className="shadow-2xl rounded-md h-max p-10 flex items-center justify-center flex-col space-y-5">
+          <p>Encuentra tu producto ideal</p>
+          <div
+            className="border-2 border-dashed hover:border-gray-600 border-gray-400 rounded-lg text-lg p-4 text-center cursor-pointer hover:border-primary transition-colors"
+            onDrop={handleDrop}
+            onDragOver={(e) => e.preventDefault()}
+            onClick={() => document.getElementById("fileInput")?.click()}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+            {image ? (
+              <img src={image} alt="Uploaded" className="max-h-64 mx-auto" />
+            ) : (
+              <div className="flex flex-col items-center">
+                <div className="text-3xl text-gray-600">
+                  <MdOutlineFileUpload />
+                </div>
+                <p className="text-sm text-gray-500">
+                  Arrastra y suelta tu imagen aquí o haz clic para seleccionar
+                </p>
+              </div>
+            )}
+            <input
+              type="file"
+              id="fileInput"
+              className="hidden"
+              accept="image/*"
+              onChange={handleFileInput}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+          </div>
+          {image && (
+            <button
+              onClick={handleSearch}
+              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
+            >
+              Buscar
+            </button>
+          )}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      </div>
+    </main>
   );
 }
