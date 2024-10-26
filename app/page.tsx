@@ -7,7 +7,6 @@ import { MdOutlineFileUpload } from "react-icons/md";
 
 export default function Home() {
   const [image, setImage] = useState<string | null>(null);
-  const [result, setResult] = useState<number | null>(null);
   const [productUrl, setProductUrl] = useState<string | null>(null);
 
 
@@ -38,18 +37,16 @@ export default function Home() {
       const blob = await fetch(image).then(res => res.blob());
       formData.append("file", blob, "image.png");
 
-      const response = await fetch("http://localhost:7000/api/search", {
+      const response = await fetch("http://62.72.0.147:7000/api/search", {
         method: "POST",
         body: formData,
       });
 
       if (response.ok) {
         const data = await response.json();
-        setResult(data);
-        console.log(data)
 
         // Hacer la segunda solicitud a /api/product/<int:id>
-        const productResponse = await fetch(`http://localhost:7000/api/product/${data}`);
+        const productResponse = await fetch(`http://62.72.0.147:7000/api/product/${data}`);
         if (productResponse.ok) {
           const productData = await productResponse.json();
           setProductUrl("https://www.google.com/search?q=" + encodeURIComponent(productData.nombre) +"liverpool");
@@ -84,7 +81,7 @@ export default function Home() {
             onClick={() => document.getElementById("fileInput")?.click()}
           >
             {image ? (
-              <img src={image} alt="Uploaded" className="max-h-64 mx-auto" />
+              <Image src={image} height={250}  width={100} alt="Uploaded" className="max-h-64 mx-auto" />
             ) : (
               <div className="flex flex-col items-center">
                 <div className="text-3xl text-gray-600">
